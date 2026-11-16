@@ -583,8 +583,10 @@ No alpha blockers: the alpha gate in [`roadmap.md`](roadmap.md#alpha-gate) passe
 - **Landed (2026-10-24, M12):** a dot grid on board pages, under the layers; a selected
   connector's ends drag onto another object or empty canvas (`board.reattach`); curved connectors;
   elbows that go around the objects they join.
+- **Landed (2026-11-16, M12):** mind maps (`board.mindMap`, `board.mindMapAdd`) have a toolbar entry
+  in the Templates picker and keyboard shortcuts (`Tab` to branch child, `Enter` to branch sibling).
 - **Missing:** timer music, board widgets, saving your own templates, table column resizing and
-  cell colours, the mind maps' toolbar entry, shortcuts, drag to re-parent and import, washi tape, code blocks, audio and huddles, quick-create handles,
+  cell colours, the mind maps' drag to re-parent and import, washi tape, code blocks, audio and huddles, quick-create handles,
   the stamp wheel, emotes and stickers, `.jam` files
   ([`boards-parity.md`](boards-parity.md)).
 - **User impact:** boards cover a brainstorm, a retrospective, a flow sketch and a timed, voted
@@ -595,6 +597,7 @@ No alpha blockers: the alpha gate in [`roadmap.md`](roadmap.md#alpha-gate) passe
 
 | Date | Change | Summary |
 |---|---|---|
+| 2026-11-16 | minor | Gap 24: mind maps toolbar entry in the Templates popover and shortcuts (Tab to branch a child, Enter to branch a sibling); drag to re-parent and .jam import are what remains of them. |
 | 2026-11-12 | minor | Gap 1: the `.fig` export writes vector region paints (#2302); the 2026-10-26 "Landed" bullet no longer says the export drops them |
 | 2026-11-10 | minor | Gap 13: a boolean group's corner radius rounds every sharp corner of its result (#2222); the boolean clause leaves the 2026-10-12 "Left" list |
 | 2026-11-10 | minor | Gap 24: mind maps, first step (`board.mindMap`, `board.mindMapAdd`; the map lays itself out again after every edit, #2226); the toolbar entry, shortcuts, drag to re-parent and `.jam` import are what is missing of them. |

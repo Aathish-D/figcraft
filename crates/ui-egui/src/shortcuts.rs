@@ -416,7 +416,9 @@ pub fn run_binding(app: &mut FigApp, id: &str) {
         "select.children" if !dev && app.session.tool.tool.draws_shape() => {
             app.run("tool.place", json!({}));
         }
+        "select.children" if !dev && add_mind_sibling_or_child(app) => {}
         "select.children" if !dev && enter_text(app) => {}
+        "select.next" if !dev && add_mind_child(app) => {}
         _ => crate::menus::invoke(app, id),
     }
 }
@@ -736,6 +738,52 @@ fn enter_text(app: &mut FigApp) -> bool {
     }
 }
 
+/// The mind map node currently being edited, if any.
+fn editing_mind_node(app: &FigApp) -> Option<figcraft_doc::NodeId> {
+    let te = app.session.ds().ok()?.text_edit.as_ref()?;
+    let doc = app.session.doc().ok()?;
+    let owner = figcraft_engine::board::owner_of_text(doc, te.id)?;
+    (doc.node(owner)?.board == Some(figcraft_doc::BoardItem::MindNode)).then_some(owner)
+}
+
+/// The single selected mind map node, if any.
+fn selected_mind_node(app: &FigApp) -> Option<figcraft_doc::NodeId> {
+    let doc = app.session.doc().ok()?;
+    let sel = app.session.selection();
+    if sel.len() != 1 {
+        return None;
+    }
+    let id = sel[0];
+    let owner = figcraft_engine::board::owner_of_text(doc, id).unwrap_or(id);
+    (doc.node(owner)?.board == Some(figcraft_doc::BoardItem::MindNode)).then_some(owner)
+}
+
+/// True when `id` is the root node of its mind map (has no incoming branch connector).
+fn is_mind_root(app: &FigApp, id: figcraft_doc::NodeId) -> bool {
+    let Ok(doc) = app.session.doc() else { return false };
+    !doc.nodes().any(|n| match &n.board {
+        Some(figcraft_doc::BoardItem::Connector(c)) => c.branch && c.to.node() == Some(id),
+        _ => false,
+    })
+}
+
+/// Tab on a selected mind map node adds a child node and starts editing it.
+fn add_mind_child(app: &mut FigApp) -> bool {
+    let Some(id) = selected_mind_node(app) else { return false };
+    app.run("board.mindMapAdd", json!({"id": id, "relation": "child", "edit": true}));
+    true
+}
+
+/// Enter on a selected mind map node adds a sibling node (or enters text edit if it's the root node).
+fn add_mind_sibling_or_child(app: &mut FigApp) -> bool {
+    let Some(id) = selected_mind_node(app) else { return false };
+    if is_mind_root(app, id) {
+        return false;
+    }
+    app.run("board.mindMapAdd", json!({"id": id, "relation": "sibling", "edit": true}));
+    true
+}
+
 /// A composition's input owner before this viewport's control/pointer handling. A normal
 /// noncomposing commit needs no prior composition, so only active compositions create a guard.
 pub(crate) struct ImeInputBaseline {
@@ -882,6 +930,19 @@ fn text_key_event(app: &mut FigApp, ctx: &Context, key: Key, physical: Option<Ke
     // Keys during a composition are the IME's (Enter picks a candidate, Escape cancels).
     if app.session.ds().is_ok_and(|d| d.text_edit.as_ref().is_some_and(|te| te.preedit.is_some())) {
         return false;
+    }
+    if matches!(key, Key::Tab | Key::Enter)
+        && !m.command
+        && !m.alt
+        && !m.ctrl
+        && !m.shift
+        && let Some(target) = editing_mind_node(app)
+    {
+        let is_root = is_mind_root(app, target);
+        let relation = if key == Key::Tab || is_root { "child" } else { "sibling" };
+        let _ = figcraft_engine::textedit::end(&mut app.session);
+        app.run("board.mindMapAdd", json!({"id": target, "relation": relation, "edit": true}));
+        return true;
     }
     if m.command || m.alt || m.ctrl {
         let before = ime_stamp(app);

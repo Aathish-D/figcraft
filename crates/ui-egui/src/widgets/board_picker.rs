@@ -1,5 +1,5 @@
 //! Boards in the UI, continued: the toolbar's templates picker (a popover of the board templates,
-//! each with a picture of itself, and a table) and the table's part of the bar over the selection
+//! each with a picture of itself, a table, and a mind map) and the table's part of the bar over the selection
 //! (add or remove a row or a column).
 
 use std::collections::HashMap;
@@ -73,7 +73,7 @@ fn picker(app: &mut FigApp, ui: &mut Ui, anchor: Rect, bottom: f32, t: &Tokens) 
     for tpl in TEMPLATES {
         pictures.0.entry(tpl.id).or_insert_with(|| picture(&ctx, tpl.id));
     }
-    let count = TEMPLATES.len() + 1;
+    let count = TEMPLATES.len() + 2;
     let rows = count.div_ceil(COLUMNS);
     let size = vec2(COLUMNS as f32 * (CARD.x + GAP) - GAP + 2.0 * PAD, TITLE_H + rows as f32 * (CARD.y + GAP) - GAP + 2.0 * PAD);
     let canvas = app.canvas.rect;
@@ -90,7 +90,13 @@ fn picker(app: &mut FigApp, ui: &mut Ui, anchor: Rect, bottom: f32, t: &Tokens) 
             let at = pos2(rect.min.x + PAD + col as f32 * (CARD.x + GAP), rect.min.y + PAD + TITLE_H + row as f32 * (CARD.y + GAP));
             let r = Rect::from_min_size(at, CARD);
             let tpl = TEMPLATES.get(i);
-            let label = tpl.map_or(tr("Table"), |tpl| tr(tpl.name));
+            let (label, fallback_icon) = if let Some(tpl) = tpl {
+                (tr(tpl.name), Icon::Templates)
+            } else if i == TEMPLATES.len() {
+                (tr("Table"), Icon::Table)
+            } else {
+                (tr("Mind map"), Icon::MindMap)
+            };
             let resp = ui.interact(r, ui.scope_id().with(("board_template", i)), Sense::click());
             a11y::menu_item(&resp, label, "", None);
             a11y::own_focus(&resp);
@@ -112,13 +118,8 @@ fn picker(app: &mut FigApp, ui: &mut Ui, anchor: Rect, bottom: f32, t: &Tokens) 
                         egui::Color32::WHITE,
                     );
                 }
-                // The table (and a template whose picture couldn't be drawn): its mark.
-                None => icons::paint(
-                    p,
-                    Rect::from_center_size(pic.center(), vec2(32.0, 32.0)),
-                    if tpl.is_some() { Icon::Templates } else { Icon::Table },
-                    egui::Color32::from_gray(90),
-                ),
+                // The table, mind map (and a template whose picture couldn't be drawn): its mark.
+                None => icons::paint(p, Rect::from_center_size(pic.center(), vec2(32.0, 32.0)), fallback_icon, egui::Color32::from_gray(90)),
             }
             p.text(pos2(r.min.x + 6.0, pic.max.y + 13.0), Align2::LEFT_CENTER, label, regular(12.0), t.menu_text);
             if resp.clicked() {
@@ -131,9 +132,12 @@ fn picker(app: &mut FigApp, ui: &mut Ui, anchor: Rect, bottom: f32, t: &Tokens) 
         app.ui.tool_flyout = None;
     }
     if let Some(i) = chosen {
-        let (cmd, params) = match TEMPLATES.get(i) {
-            Some(tpl) => ("board.template", json!({"name": tpl.id})),
-            None => ("board.table", json!({})),
+        let (cmd, params) = if let Some(tpl) = TEMPLATES.get(i) {
+            ("board.template", json!({"name": tpl.id}))
+        } else if i == TEMPLATES.len() {
+            ("board.table", json!({}))
+        } else {
+            ("board.mindMap", json!({}))
         };
         app.run(cmd, params);
         app.ui.tool_flyout = None;

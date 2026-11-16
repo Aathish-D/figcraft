@@ -41,7 +41,7 @@ fn the_templates_picker_places_a_template_or_a_table() {
     click(&mut u, at);
     assert_eq!(u.app.ui.tool_flyout, Some("board_templates"));
     let shapes = flat(&u.frame_output(vec![]).shapes);
-    for name in ["Retrospective", "Brainstorm", "Weekly planner", "Flow chart", "Kanban board", "Table"] {
+    for name in ["Retrospective", "Brainstorm", "Weekly planner", "Flow chart", "Kanban board", "Table", "Mind map"] {
         assert!(has_text(&shapes, name), "{name} in the picker");
     }
     let pictures = shapes.iter().filter(|s| matches!(s, egui::Shape::Mesh(m) if m.texture_id != egui::TextureId::default())).count();
@@ -55,6 +55,11 @@ fn the_templates_picker_places_a_template_or_a_table() {
     let shapes = flat(&u.frame_output(vec![]).shapes);
     click(&mut u, text_center(&shapes, "Table"));
     assert_eq!(count(&u, |b| *b == BoardItem::Table), 1);
+    // Again, for a mind map.
+    click(&mut u, at);
+    let shapes = flat(&u.frame_output(vec![]).shapes);
+    click(&mut u, text_center(&shapes, "Mind map"));
+    assert_eq!(count(&u, |b| *b == BoardItem::MindNode), 4);
     // Escape closes it.
     click(&mut u, at);
     u.frame(vec![Event::Key { key: egui::Key::Escape, physical_key: None, pressed: true, repeat: false, modifiers: Modifiers::NONE }]);
@@ -80,4 +85,26 @@ fn the_selection_bar_adds_and_removes_a_tables_rows_and_columns() {
         click(&mut u, pos2(r.min.x + 8.0 + i as f32 * 30.0 + 14.0, r.center().y));
         assert_eq!(size(&u), want, "cell {i}");
     }
+}
+
+#[test]
+fn mind_map_shortcuts_tab_and_enter_create_child_and_sibling() {
+    let mut u = board();
+    let out = u.app.session.execute("board.mindMap", &json!({"x": 0, "y": 0})).unwrap();
+    let root = NodeId(out["id"].as_u64().unwrap());
+    u.app.session.set_selection(vec![root]);
+    u.frame(vec![]);
+
+    // Root selected: Tab creates a new child node (now 5 nodes: root + 4 children).
+    u.frame(vec![Event::Key { key: egui::Key::Tab, physical_key: None, pressed: true, repeat: false, modifiers: Modifiers::NONE }]);
+    assert_eq!(count(&u, |b| *b == BoardItem::MindNode), 5);
+
+    // The newly created child is selected and in text edit mode.
+    // While in text edit mode, pressing Enter commits and creates a sibling node (now 6 nodes).
+    u.frame(vec![Event::Key { key: egui::Key::Enter, physical_key: None, pressed: true, repeat: false, modifiers: Modifiers::NONE }]);
+    assert_eq!(count(&u, |b| *b == BoardItem::MindNode), 6);
+
+    // While in text edit mode of the sibling, pressing Tab commits and creates a child node (now 7 nodes).
+    u.frame(vec![Event::Key { key: egui::Key::Tab, physical_key: None, pressed: true, repeat: false, modifiers: Modifiers::NONE }]);
+    assert_eq!(count(&u, |b| *b == BoardItem::MindNode), 7);
 }

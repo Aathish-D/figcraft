@@ -219,6 +219,7 @@ icons! {
     /// The table bar's rows and columns: a strip with a plus or a minus beyond its end.
     Templates,
     Table,
+    MindMap,
     AddRow,
     RemoveRow,
     AddColumn,

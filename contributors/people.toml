@@ -118,3 +118,6 @@ real_name = "Ashok Ram"
 
 [people.GiovanniBot]
 sync_github_name = true
+
+[people.Aathish-D]
+sync_github_name = true
